@@ -1,4 +1,4 @@
-# mongoose-model-factory
+# mongoose-get-models
 
 An easy way to manage mongoose models across packages.
 
@@ -14,7 +14,7 @@ Before writing this, every single one of our projects / services had to redefine
 
 ```typescript
 import mongoose from 'mongoose';
-import { modelFactory } from 'mongoose-models';
+import { modelFactory } from 'mongoose-get-models';
 import { UserSchema, type IUser } from './user'
 
 // Create your factory
@@ -35,7 +35,7 @@ In your schemas package:
 ```typescript
 // index.ts
 import mongoose from 'mongoose';
-import { modelFactory, type Models, type Mongoose } from 'mongoose-models';
+import { modelFactory, type Models, type Mongoose } from 'mongoose-get-models';
 import { UserSchema, type IUser } from './user'
 
 type MyTypes = {
@@ -69,7 +69,7 @@ In your app:
 ```typescript
 // app.ts
 import mongoose from 'mongoose';
-import { setMongooseInstance } from '@your-org/mongoose-schemas';
+import { setMongooseInstance, getModels, getModel } from '@your-org/mongoose-schemas';
 import { initialize } from '@your-org/utils'
 
 setMongooseInstance(mongoose);
@@ -102,7 +102,7 @@ export function initialize(mongooseInstance: Mongoose): void {
 }
 
 // anywhere else
-import { getModels } from './models';
+import { getModels } from '@your-org/mongoose-schemas';
 const { User } = getModels();
 ```
 
