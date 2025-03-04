@@ -1,10 +1,13 @@
 {
   "name": "mongoose-get-models",
   "description": "",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Ben Thayer",
   "license": "MIT",
-
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/username/repository-name.git"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
