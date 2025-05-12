@@ -7,5 +7,10 @@ export type Schemas<T> = {
 export type Models<T> = {
     [K in keyof T]: mongoose.Model<T[K]>;
 };
-export type GetModelFunction<T> = (mongooseInstance: Mongoose) => Models<T>;
-export default function modelFactory<T>(schemas: Schemas<T>): GetModelFunction<T>;
+export type SetMongooseInstanceFunction = (mongoose: Mongoose) => void;
+export type GetModelFunction<T> = <K extends keyof Models<T>>(modelName: K) => Models<T>[K];
+type ModelFactoryReturnType<T> = {
+    setMongooseInstance: SetMongooseInstanceFunction;
+    getModel: GetModelFunction<T>;
+};
+export declare function modelFactory<T>(schemas: Schemas<T>): ModelFactoryReturnType<T>;

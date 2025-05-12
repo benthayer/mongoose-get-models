@@ -4,7 +4,7 @@ An easy way to manage mongoose models across packages.
 
 ## What?
 
-This package export a `modelFactory<T>(schemas)` function that returns a `getModels(mongoose) => YourModels` function that allows you to get all of your models linked to a given mongoose instance / connection. This is convenient when you have a dependency that also uses your mongoose models where you want/need to share a connection and avoid complex and annoying model definition and connection management errors.
+This package export a `modelFactory<T>(schemas)` function that returns a `getModel` function that allows you to get all of your models linked to a given mongoose instance / connection. This is convenient when you have a dependency that also uses your mongoose models where you want/need to share a connection and avoid complex and annoying model definition and connection management errors.
 
 ## Why?
 
@@ -18,12 +18,14 @@ import { modelFactory } from 'mongoose-get-models';
 import { UserSchema, type IUser } from './user'
 
 // Create your factory
-const getModels = modelFactory<{ User: IUser }>({
+const { setMongooseInstance, getModel } = modelFactory<{ User: IUser }>({
   User: UserSchema
 });
 
+setMongooseInstance(mongoose)
+
 // Get models
-const { User } = getModels(mongoose);
+const { User } = getModel();
 ```
 
 ## Useful pattern
@@ -43,25 +45,9 @@ type MyTypes = {
 }
 
 type MyModels = Models<MyTypes>
-// Create your factory
-const getModelsWithConnection: (mongoose: Mongoose) => MyModels = modelFactory<MyTypes>({
+export const { setMongooseInstance, getModel } = modelFactory<MyTypes>({
   User: UserSchema
 });
-
-let mongooseInstance: Mongoose | null = null;
-
-export function setMongooseInstance(mongoose: Mongoose) {
-  mongooseInstance = mongoose;
-}
-
-export function getModels(): MyModels {
-  if (!mongooseInstance) throw new Error('Mongoose not initialized');
-  return getModelsWithConnection(mongooseInstance);
-}
-
-export function getModel<T extends keyof MyModels>(name: T): MyModels[T] {
-  return getModels()[name]
-}
 ```
 
 In your app:
@@ -69,26 +55,22 @@ In your app:
 ```typescript
 // app.ts
 import mongoose from 'mongoose';
-import { setMongooseInstance, getModels, getModel } from '@your-org/mongoose-schemas';
-import { initialize } from '@your-org/utils'
+import { setMongooseInstance, getModel } from '@your-org/mongoose-schemas';
+import { setMongooseInstance as setMongooseInstanceInOtherPackage } from '@your-org/utils'
 
 setMongooseInstance(mongoose);
-// Can call getModels any time after initialization
-const { User } = getModels()
-// or
+// Can call getModel any time after initialization
 const User = getModel('User')
 
-// utils doesn't use the same instance of schemas, so we have to initialize that too
-// in the utils package, we can't call getModels() on the top level since it is not
-// possible to set the mongoose instance before initializing, so it's best to call
-// getModel/getModels at runtime
-initialize(mongoose)
-
-// Can initialize before or after
+// It's okay to connect mongoose after initialization
 mongoose.connect('mongodb://localhost:27017/myapp');
 
+// Share the mongoose instance with another package
+setMongooseInstanceInOtherPackage(mongoose)
+
+
 // anywhere else
-import { getModels } from './models';
+import { getModel } from '@your-org/mongoose-schemas';
 function getUser(id) {
   return getModel('User').findById(id)
 }
@@ -96,14 +78,16 @@ function getUser(id) {
 
 In utils:
 ```typescript
-import { setMongooseInstance, Mongoose } from '@your-org/mongoose-schemas';
-export function initialize(mongooseInstance: Mongoose): void {
-  setMongooseInstance(mongooseInstance)
+import { setMongooseInstance as setMongooseInstanceSuper, Mongoose } from '@your-org/mongoose-schemas';
+export function setMongooseInstance(mongooseInstance: Mongoose): void {
+  setMongooseInstanceSuper(mongooseInstance)
 }
 
 // anywhere else
-import { getModels } from '@your-org/mongoose-schemas';
-const { User } = getModels();
+import { getModel } from '@your-org/mongoose-schemas';
+function getUser(id) {
+  return getModel('User').findById(id)
+}
 ```
 
 ## License

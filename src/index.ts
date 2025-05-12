@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { Mongoose } from 'mongoose';
+
 export { Mongoose } from 'mongoose';
 
 export type Schemas<T> = {
@@ -10,29 +11,52 @@ export type Models<T> = {
   [K in keyof T]: mongoose.Model<T[K]>
 };
 
-export type GetModelFunction<T> = (mongooseInstance: Mongoose) => Models<T>;
+function getOrCreateModel<T, K extends keyof Schemas<T>>(
+  mongooseInstance: Mongoose,
+  schemas: Schemas<T>,
+  modelName: K
+): Models<T>[K] {
+  const modelNameString = modelName as string
+  try {
+    // Get
+    return mongooseInstance.model(modelNameString) as Models<T>[K]
+  } catch (error) {
+    // Create
+    return mongooseInstance.model(
+      modelNameString, 
+      schemas[modelName]
+    ) as Models<T>[K]
+  }
+};
 
-export default function modelFactory<
-  T
->(schemas: Schemas<T>): GetModelFunction<T> {
-  return function getModels(mongooseInstance: Mongoose): Models<T> {
-    const models = {} as Models<T>;
-    
-    for (const key in schemas) {
-      const modelName = key as string;
-      // Try to get existing model or create new one
-      try {
-        // First attempt to get an existing model
-        models[key] = mongooseInstance.model(modelName) as mongoose.Model<T[typeof key]>;
-      } catch (error) {
-        // If the model doesn't exist yet, create it
-        models[key] = mongooseInstance.model(
-          modelName, 
-          schemas[key]
-        ) as mongoose.Model<T[typeof key]>;
-      }
+export type SetMongooseInstanceFunction = (mongoose: Mongoose) => void;
+export type GetModelFunction<T> = <K extends keyof Models<T>>(modelName: K) => Models<T>[K];
+
+type ModelFactoryReturnType<T> = {
+  setMongooseInstance: SetMongooseInstanceFunction;
+  getModel: GetModelFunction<T>;
+}
+
+export function modelFactory<T>(schemas: Schemas<T>): ModelFactoryReturnType<T> {
+  
+  let mongooseInstance: Mongoose | null = null;
+
+  const setMongooseInstance = (mongoose: Mongoose): void => {
+    mongooseInstance = mongoose;
+    for (const modelName in schemas) {
+      getOrCreateModel(mongoose, schemas, modelName as keyof Schemas<T>);
     }
-    
-    return models;
-  };
+  }
+
+  const getModel: GetModelFunction<T> = (modelName) => {
+    if (!mongooseInstance) {
+      throw new Error('Mongoose not initialized')
+    }
+    return getOrCreateModel(mongooseInstance, schemas, modelName);
+  }
+
+  return {
+    setMongooseInstance,
+    getModel
+  }
 }
